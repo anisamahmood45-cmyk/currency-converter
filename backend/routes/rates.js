@@ -37,4 +37,28 @@ router.get('/history', async (req, res) => {
   }
 });
 
+let cryptoCache = { rates: null, ts: 0 };
+router.get('/crypto', async (req, res) => {
+  try {
+    if (cryptoCache.rates && Date.now() - cryptoCache.ts < TTL)
+      return res.json({ rates: cryptoCache.rates, cached: true });
+    const r = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin,solana&vs_currencies=usd'
+    );
+    if (!r.ok) throw new Error('Crypto API error');
+    const data = await r.json();
+    const rates = {
+      BTC: data.bitcoin?.usd || 67000,
+      ETH: data.ethereum?.usd || 3500,
+      USDT: data.tether?.usd || 1,
+      BNB: data.binancecoin?.usd || 580,
+      SOL: data.solana?.usd || 170,
+    };
+    cryptoCache = { rates, ts: Date.now() };
+    res.json({ rates, cached: false });
+  } catch {
+    res.json({ rates: { BTC:67000, ETH:3500, USDT:1, BNB:580, SOL:170 }, cached: false });
+  }
+});
+
 module.exports = router;
