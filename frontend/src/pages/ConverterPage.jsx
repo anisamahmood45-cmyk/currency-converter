@@ -27,7 +27,9 @@ const CRYPTO_FALLBACK = {BTC:67000,ETH:3500,USDT:1,BNB:580,SOL:170};
 const QUICK = [['USD','PKR'],['EUR','USD'],['GBP','PKR'],['AED','PKR'],['BTC','USD'],['ETH','USD']];
 const SHOW_RATES = ['EUR','GBP','PKR','AED','SAR','JPY','INR','CAD'];
 const MULTI_AMTS = [1,5,10,50,100,500,1000];
-const hdrs = ()=>({Authorization:`Bearer ${localStorage.getItem('token')}`});
+const token = () => localStorage.getItem('token');
+const hdrs  = () => ({ Authorization: `Bearer ${token()}` });
+const isLoggedIn = () => !!token();
 
 export default function ConverterPage() {
   const navigate = useNavigate();
@@ -58,12 +60,14 @@ export default function ConverterPage() {
     axios.get('/api/rates/crypto', { headers: hdrs() })
       .then(({ data }) => setCryptoRates(data.rates))
       .catch(() => {});
-    axios.get('/api/favorites', { headers: hdrs() })
-      .then(({ data }) => setFavs(data.map(f=>`${f.from}-${f.to}`)))
-      .catch(err => { if (err.response?.status===401) { localStorage.removeItem('token'); navigate('/login'); } });
-    axios.get('/api/history', { headers: hdrs() })
-      .then(({ data }) => setHistory(data))
-      .catch(() => {});
+    if (isLoggedIn()) {
+      axios.get('/api/favorites', { headers: hdrs() })
+        .then(({ data }) => setFavs(data.map(f=>`${f.from}-${f.to}`)))
+        .catch(() => {});
+      axios.get('/api/history', { headers: hdrs() })
+        .then(({ data }) => setHistory(data))
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => { convert(); }, [from, to, amount, fee, fiatRates, cryptoRates]);
@@ -92,6 +96,7 @@ export default function ConverterPage() {
 
   const saveConversion = async () => {
     if (!result) return;
+    if (!isLoggedIn()) return showToast('🔒 Sign in to save history');
     const rate = getRate(from, to);
     try {
       const { data } = await axios.post('/api/history', { from, to, amount:parseFloat(amount), result, rate }, { headers: hdrs() });
@@ -101,6 +106,7 @@ export default function ConverterPage() {
   };
 
   const toggleFav = async (f, t) => {
+    if (!isLoggedIn()) return showToast('🔒 Sign in to save favorites');
     const key=`${f}-${t}`;
     try {
       await axios.post('/api/favorites', { from:f, to:t }, { headers: hdrs() });

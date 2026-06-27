@@ -16,7 +16,7 @@ export default function App() {
         <Route path="/"          element={<Navigate to="/converter" />} />
         <Route path="/login"     element={<LoginPage />} />
         <Route path="/signup"    element={<SignupPage />} />
-        <Route path="/converter" element={<Protected><ConverterPage /></Protected>} />
+        <Route path="/converter" element={<ConverterPage />} />
       </Routes>
     </BrowserRouter>
   );
